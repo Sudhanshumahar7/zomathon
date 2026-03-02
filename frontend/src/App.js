@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { getRecommendations } from './api';
 
-// ── Mock fallback (used when backend is unreachable) ───
 const MOCK_RESPONSE = (p) => {
   const morning = p.time_of_day === 1;
   const rainy   = p.weather === 3;
@@ -26,7 +25,6 @@ const MOCK_RESPONSE = (p) => {
   };
 };
 
-// ── Score bar — animates width on mount ───────────────
 function ScoreBar({ pct }) {
   const fillRef = useRef(null);
   useEffect(() => {
@@ -42,20 +40,17 @@ function ScoreBar({ pct }) {
   );
 }
 
-// ── Toast ─────────────────────────────────────────────
 function Toast({ message }) {
   return <div className={`toast ${message ? 'show' : ''}`}>{message}</div>;
 }
 
-// ── Main App ──────────────────────────────────────────
 export default function App() {
 
-  // Order context — maps 1:1 to CartPayload in main.py
   const [ctx, setCtx] = useState({
     restaurant_id:     42,
-    city:              1,   // 1=Mumbai 2=Delhi 3=Bangalore 4=Hyderabad 5=Pune
-    time_of_day:       1,   // 1=Morning 2=Afternoon 3=Evening 4=Night
-    weather:           1,   // 1=Clear 2=Cloudy 3=Rainy 4=Hot
+    city:              1,   
+    time_of_day:       1,   
+    weather:           1,   
     restaurant_rating: 4.2,
     total_reviews:     250,
   });
@@ -82,7 +77,6 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(''), 2600);
   };
 
-  // ── Cart helpers ──────────────────────────────────
   const addItem = () => {
     if (!newName.trim()) { showToast('Please enter an item name'); return; }
     setCartItems(prev => [
@@ -104,7 +98,6 @@ export default function App() {
   const totalVal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
   const totalQty = cartItems.reduce((s, i) => s + i.qty, 0);
 
-  // ── Context field change ──────────────────────────
   const handleCtxChange = (e) => {
     const { name, value } = e.target;
     setCtx(prev => ({
@@ -115,7 +108,6 @@ export default function App() {
     }));
   };
 
-  // ── Call POST /api/recommend via axios ────────────
   const runRecommendation = async () => {
     if (!cartItems.length) { showToast('Add at least one cart item first'); return; }
 
@@ -124,27 +116,22 @@ export default function App() {
     setAddedSet(new Set());
     setApiError('');
 
-    // Matches CartPayload in main.py exactly
     const payload = {
       restaurant_id:      ctx.restaurant_id,
       city:               ctx.city,
       time_of_day:        ctx.time_of_day,
       weather:            ctx.weather,
-      current_cart_value: totalVal,   // auto-computed from cart
-      cart_size:          totalQty,   // auto-computed from cart
+      current_cart_value: totalVal,   
+      cart_size:          totalQty,  
       restaurant_rating:  ctx.restaurant_rating,
       total_reviews:      ctx.total_reviews,
     };
 
     try {
-      // ── axios call via api.js service ────────────
       const data = await getRecommendations(payload);
       setResult(data);
     } catch (err) {
-      // Axios throws on non-2xx and network errors
-      // Error message already formatted by interceptor in api.js
       setApiError(`Backend unreachable — showing demo data. (${err.message})`);
-      // Still show mock so UI isn't blank
       await new Promise(r => setTimeout(r, 600));
       setResult(MOCK_RESPONSE(payload));
     } finally {
@@ -153,6 +140,45 @@ export default function App() {
   };
 
   const recs = result?.recommendations || [];
+
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const isVersionA = urlParams.get('version') === 'A';
+
+  if (isVersionA) {
+    return (
+      <>
+        <header>
+          <div className="logo">
+            <div className="logo-icon">🍽️</div>
+            Zomathon
+            <div className="logo-divider" />
+            <span className="logo-sub">Standard View</span>
+          </div>
+          <div className="header-tag" style={{background: '#666', color: 'white'}}>⚙️ Control Group (Static)</div>
+        </header>
+        <div className="page" style={{ justifyContent: 'center' }}>
+          <div className="left-col" style={{ width: '100%', maxWidth: '600px', margin: '40px auto' }}>
+            <div className="page-title">Standard Trending Menu</div>
+            <div className="page-sub" style={{ marginBottom: '30px' }}>
+              This is Variant A. It represents the standard heuristic algorithm currently used. 
+              Recommendations are static and do not adapt to the user's cart, weather, or time of day.
+            </div>
+            <div className="addons-card">
+              <div className="addons-header">
+                <span className="addons-title">Trending Nationally</span>
+              </div>
+              <div className="addons-list">
+                <div className="addon-row"><div className="addon-body"><div className="addon-name">🍟 French Fries</div></div></div>
+                <div className="addon-row"><div className="addon-body"><div className="addon-name">🥤 Cold Coffee</div></div></div>
+                <div className="addon-row"><div className="addon-body"><div className="addon-name">🧄 Garlic Bread</div></div></div>
+                <div className="addon-row"><div className="addon-body"><div className="addon-name">🍨 Vanilla Ice Cream</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
